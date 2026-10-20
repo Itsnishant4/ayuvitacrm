@@ -28,7 +28,8 @@
     "publish": {
       "provider": "github",
       "owner": "itsnishant4",
-      "repo": "ayuvitacrm"
+      "repo": "ayuvitacrm",
+      "releaseType": "release"
     },
     "mac": {
       "category": "public.app-category.business",

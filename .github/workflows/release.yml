@@ -27,7 +27,22 @@ jobs:
       - name: Build renderer
         run: npm run build
 
+      - name: Pre-create GitHub release
+        run: |
+          if (-not (gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY 2>$null)) {
+            gh release create $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --title "ayuvitaCRM $env:GITHUB_REF_NAME" --notes "" --draft=false
+          }
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Package and publish to GitHub Releases
         run: npx electron-builder --win --x64 --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure release assets are complete
+        run: |
+          gh release upload $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --clobber "dist_electron/*.exe" "dist_electron/*.exe.blockmap" "dist_electron/latest.yml" "dist_electron/*.exe.sig" 2>$null
+          gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
