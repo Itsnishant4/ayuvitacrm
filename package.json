@@ -1,6 +1,6 @@
 {
   "name": "ayuvitaCRM",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "CRM Desktop Application",
   "main": "main.js",
   "scripts": {
@@ -19,6 +19,7 @@
       "output": "dist_electron"
     },
     "files": [
+      ".env",
       "dist",
       "main.js",
       "preload.js",

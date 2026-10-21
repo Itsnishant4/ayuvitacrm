@@ -35,6 +35,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Create bundled .env for packaged app
+        shell: pwsh
+        run: |
+          $kv = [ordered]@{
+            'SHOPIFY_DOMAIN'             = '${{ secrets.SHOPIFY_DOMAIN }}'
+            'SHOPIFY_ADMIN_ACCESS_TOKEN' = '${{ secrets.SHOPIFY_ADMIN_ACCESS_TOKEN }}'
+            'SHOPIFY_CLIENT_ID'          = '${{ secrets.SHOPIFY_CLIENT_ID }}'
+            'SHOPIFY_CLIENT_SECRET'      = '${{ secrets.SHOPIFY_CLIENT_SECRET }}'
+            'SUPABASE_RLS_SECRET'        = '${{ secrets.SUPABASE_RLS_SECRET }}'
+          }
+          ($kv.GetEnumerator() | Where-Object { $_.Value } | ForEach-Object { "$($_.Key)=$($_.Value)" }) | Set-Content -Path .env -Encoding utf8
+          Write-Host "Bundled .env with $($kv.Count) keys"
+
       - name: Package and publish to GitHub Releases
         run: npx electron-builder --win --x64 --publish always
         env:

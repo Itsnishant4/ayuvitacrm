@@ -1,4 +1,7 @@
-require('dotenv').config();
+// Load the .env that is bundled with packaged builds (see package.json files
+// + the release workflow) from the app root inside the asar.
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 
 const isTesting = process.env.CRM_TESTING === 'true';
@@ -54,7 +57,6 @@ function wrapHandler(channel, handler) {
   };
 }
 const { autoUpdater } = require('electron-updater');
-const path = require('path');
 const crypto = require('crypto');
 const { supabase } = require('./database/supabaseClient');
 const { initDatabase, closeDatabase, getDatabasePath, dbHelpers } = require('./database/db');
