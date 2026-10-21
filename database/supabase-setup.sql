@@ -63,7 +63,7 @@ create table if not exists private.app_config (
   key text primary key,
   value text not null
 );
-insert into private.app_config (key, value) values ('rls_secret', '12d11971586c59db1326263f1d3a796d4e62ec6f004d89e4')
+insert into private.app_config (key, value) values ('rls_secret', '<SUPABASE_RLS_SECRET> — replace with the value from your .env, keep this SQL private')
   on conflict (key) do update set value = excluded.value;
 
 -- nobody outside the service role/owner can ever watch the secret table
