@@ -1166,6 +1166,24 @@ ipcMain.handle('shopify-sync-now', wrapHandler('shopify-sync-now', async (event,
 
   try {
     const result = await syncShopifyNow(scope, logger);
+
+    // Referral sync (Supabase -> local SQLite cache) so partners are cached
+    // offline and order->partner joins work on fresh installs.
+    try {
+      const { data: partners, error: refErr } = await supabase
+        .from('referrals')
+        .select('*');
+      if (refErr) throw refErr;
+      const cacheRes = await dbHelpers.upsertReferralsFromSupabase(partners || []);
+      if (cacheRes.success) {
+        logger(`Referral sync: ${cacheRes.upserted} partners cached in local database`);
+      } else {
+        logger(`Referral local cache update failed: ${cacheRes.error}`, 'error');
+      }
+    } catch (refError) {
+      logger(`Referral sync failed: ${refError.message}`, 'warn');
+    }
+
     if (result.success) {
       const win = BrowserWindow.fromWebContents(webContents);
       if (win && !win.isDestroyed()) {

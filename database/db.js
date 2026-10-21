@@ -458,6 +458,45 @@ const dbHelpers = {
       return { success: false, error: error.message };
     }
   },
+  upsertReferralsFromSupabase: async (partners) => {
+    try {
+      if (!Array.isArray(partners) || partners.length === 0) {
+        return { success: true, upserted: 0 };
+      }
+      const stmt = db.prepare(`
+        INSERT INTO referrals (name, email, phone, referral_code, role, parent_code, region, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(referral_code) DO UPDATE SET
+          name = excluded.name,
+          email = excluded.email,
+          phone = excluded.phone,
+          role = excluded.role,
+          parent_code = excluded.parent_code,
+          region = excluded.region,
+          created_at = excluded.created_at
+      `);
+      let upserted = 0;
+      const tx = db.transaction((list) => {
+        for (const r of list) {
+          stmt.run(
+            r.name,
+            r.email || null,
+            r.phone,
+            r.referral_code,
+            r.role || 'retailer',
+            r.parent_code || null,
+            r.region || null,
+            r.created_at || null
+          );
+          upserted++;
+        }
+      });
+      tx(partners);
+      return { success: true, upserted };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  },
   getPartners: async () => {
     try {
       const partners = db.prepare('SELECT * FROM referrals ORDER BY created_at DESC').all();
