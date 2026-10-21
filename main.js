@@ -94,14 +94,27 @@ function loadConfig() {
   }
 }
 
-// Auto-updater setup — feed comes from package.json > build.publish (GitHub provider)
+// Auto-updater setup — feed comes from package.json > build.publish (GitHub provider).
+// NOTE: electron-builder STRIPS the "build" section from package.json inside the
+// packaged asar, so in a packaged app this returns null and electron-updater
+// falls back to the app-update.yml that electron-builder ships in resources/.
 function setupAutoUpdater() {
-  const publish = require('./package.json').build.publish || {};
-  autoUpdater.setFeedURL({
-    provider: 'github',
-    owner: publish.owner,
-    repo: publish.repo
-  });
+  let publish = null;
+  try {
+    const pkg = require('./package.json');
+    publish = (pkg && pkg.build && pkg.build.publish) || null;
+  } catch (e) {
+    publish = null;
+  }
+  if (publish && publish.owner && publish.repo) {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: publish.owner,
+      repo: publish.repo
+    });
+  } else {
+    console.log('[Updater] Using default app-update.yml feed (packaged build).');
+  }
 
   autoUpdater.autoDownload = false;
 
@@ -217,19 +230,32 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  loadConfig();
-  setupAutoUpdater();
-  initDatabase();
+  // Each startup step is guarded so one failed subsystem can never block the
+  // window from opening (1.5.1 shipped a startup crash caused by this).
+  try { loadConfig(); } catch (e) { console.error('[Startup] loadConfig failed:', e); }
+  try { setupAutoUpdater(); } catch (e) { console.error('[Startup] updater init failed:', e); }
+  try {
+    initDatabase();
+  } catch (e) {
+    console.error('[Startup] initDatabase failed:', e);
+    dialog.showErrorBox('Startup Error', `Database failed to initialize: ${e.message}`);
+  }
   runStartupAddressRepair().catch(err => console.error('[Startup Repair Error]', err));
-  createWindow();
+  try {
+    createWindow();
+  } catch (e) {
+    console.error('[Startup] createWindow failed:', e);
+  }
 
   if (!isTesting) {
     startBackgroundSyncScheduler();
-    // Check for updates every 6 hours
-    autoUpdater.checkForUpdates().catch(() => {});
-    setInterval(() => {
+    // Check for updates every 6 hours (packaged builds only — dev has no feed)
+    if (app.isPackaged) {
       autoUpdater.checkForUpdates().catch(() => {});
-    }, 6 * 60 * 60 * 1000);
+      setInterval(() => {
+        autoUpdater.checkForUpdates().catch(() => {});
+      }, 6 * 60 * 60 * 1000);
+    }
   }
 
   app.on('activate', () => {
